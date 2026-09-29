@@ -1,14 +1,10 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
+import Header from './components/Header'
 
 function App() {
   return (
     <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/favorites">Favorites</Link>
-        </nav>
-      </header>
+      <Header />
       <main>
         <Outlet />
       </main>
