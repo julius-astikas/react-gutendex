@@ -26,7 +26,8 @@ function Home() {
   const search = searchParams.get('search')
   const page = searchParams.get('page')
   const url = buildHomeUrl(search, page)
-  const { books, loading, error, next, previous, retry } = useBooks(url)
+  const { books, loading, slowLoading, error, next, previous, retry } =
+    useBooks(url)
 
   function goToPage(pageUrl) {
     if (!pageUrl) {
@@ -53,6 +54,11 @@ function Home() {
     <section>
       <h1>{search ? `Search results for: ${search}` : 'Gutendex Books'}</h1>
       {loading && <BookListSkeleton />}
+      {loading && slowLoading && (
+        <p className="message">
+          Still loading — Gutendex is responding slowly...
+        </p>
+      )}
       {error && (
         <div className="message error">
           <p>{error}</p>

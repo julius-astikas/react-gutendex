@@ -5,17 +5,22 @@ const prefetchRequests = new Map()
 
 const CACHE_PREFIX = 'gutendex_cache:'
 const CACHE_TTL_MS = 30 * 60 * 1000
-const REQUEST_TIMEOUT_MS = 20000
 const RETRY_DELAY_MS = 700
+const SLOW_LOADING_MS = 8000
+const NEXT_PREFETCH_DELAY_MS = 1500
 
 function wait(ms, signal) {
   return new Promise((resolve, reject) => {
-    if (signal.aborted) {
+    if (signal?.aborted) {
       reject(createAbortError())
       return
     }
 
     const timeoutId = setTimeout(resolve, ms)
+
+    if (!signal) {
+      return
+    }
 
     function onAbort() {
       clearTimeout(timeoutId)
@@ -32,18 +37,8 @@ function createAbortError() {
   return error
 }
 
-function createTimeoutError() {
-  const error = new Error('timeout')
-  error.name = 'TimeoutError'
-  return error
-}
-
-function isRetryableError(error) {
-  return (
-    error.name === 'TimeoutError' ||
-    error.name === 'TypeError' ||
-    error.message === 'Failed to fetch'
-  )
+function isNetworkError(error) {
+  return error.name === 'TypeError' || error.message === 'Failed to fetch'
 }
 
 function getCachedBooks(url) {
@@ -93,108 +88,42 @@ function setCachedBooks(url, data) {
   }
 }
 
-async function fetchBooksOnce(url, externalSignal) {
-  const controller = new AbortController()
-  let timedOut = false
+async function fetchBooksOnce(url, signal) {
+  const response = await fetch(url, signal ? { signal } : undefined)
 
-  const timeoutId = setTimeout(() => {
-    timedOut = true
-    controller.abort()
-  }, REQUEST_TIMEOUT_MS)
-
-  function onExternalAbort() {
-    clearTimeout(timeoutId)
-    controller.abort()
+  if (!response.ok) {
+    throw new Error('Could not load books')
   }
 
-  if (externalSignal.aborted) {
-    clearTimeout(timeoutId)
-    throw createAbortError()
-  }
+  const data = await response.json()
 
-  externalSignal.addEventListener('abort', onExternalAbort)
-
-  try {
-    const response = await fetch(url, { signal: controller.signal })
-
-    if (!response.ok) {
-      throw new Error('Could not load books')
-    }
-
-    const data = await response.json()
-
-    return {
-      results: data.results,
-      next: data.next,
-      previous: data.previous,
-    }
-  } catch (error) {
-    if (externalSignal.aborted) {
-      throw createAbortError()
-    }
-
-    if (timedOut) {
-      throw createTimeoutError()
-    }
-
-    throw error
-  } finally {
-    clearTimeout(timeoutId)
-    externalSignal.removeEventListener('abort', onExternalAbort)
+  return {
+    results: data.results,
+    next: data.next,
+    previous: data.previous,
   }
 }
 
-async function fetchBooksWithRetry(url, externalSignal) {
-  let lastError = null
-
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    if (externalSignal.aborted) {
+async function fetchBooksWithRetry(url, signal) {
+  try {
+    const data = await fetchBooksOnce(url, signal)
+    setCachedBooks(url, data)
+    return data
+  } catch (error) {
+    if (error.name === 'AbortError' || signal?.aborted) {
       throw createAbortError()
     }
 
-    try {
-      const data = await fetchBooksOnce(url, externalSignal)
-      setCachedBooks(url, data)
-      return data
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        throw error
-      }
-
-      lastError = error
-
-      if (attempt < 2 && isRetryableError(error)) {
-        await wait(RETRY_DELAY_MS, externalSignal)
-        continue
-      }
-
+    if (!isNetworkError(error)) {
       throw error
     }
+
+    await wait(RETRY_DELAY_MS, signal)
+
+    const data = await fetchBooksOnce(url, signal)
+    setCachedBooks(url, data)
+    return data
   }
-
-  throw lastError
-}
-
-async function loadBooksData(url, externalSignal) {
-  const cached = getCachedBooks(url)
-
-  if (cached) {
-    return cached
-  }
-
-  if (prefetchRequests.has(url)) {
-    const data = await prefetchRequests.get(url)
-
-    if (externalSignal.aborted) {
-      throw createAbortError()
-    }
-
-    if (data) {
-      return data
-    }
-  }
-
-  return fetchBooksWithRetry(url, externalSignal)
 }
 
 function prefetchBooks(url) {
@@ -212,23 +141,59 @@ function prefetchBooks(url) {
     return prefetchRequests.get(url)
   }
 
-  const controller = new AbortController()
-
-  const request = fetchBooksWithRetry(url, controller.signal)
-    .then((data) => data)
+  const request = fetchBooksWithRetry(url, null)
     .catch(() => null)
     .finally(() => {
-      prefetchRequests.delete(url)
+      if (prefetchRequests.get(url) === request) {
+        prefetchRequests.delete(url)
+      }
     })
 
   prefetchRequests.set(url, request)
   return request
 }
 
+function scheduleNextPrefetch(nextUrl) {
+  if (!nextUrl) {
+    return () => {}
+  }
+
+  const timeoutId = setTimeout(() => {
+    prefetchBooks(nextUrl)
+  }, NEXT_PREFETCH_DELAY_MS)
+
+  return () => {
+    clearTimeout(timeoutId)
+  }
+}
+
+async function loadForegroundBooks(url, signal) {
+  const cached = getCachedBooks(url)
+
+  if (cached) {
+    return cached
+  }
+
+  if (prefetchRequests.has(url)) {
+    const prefetched = await prefetchRequests.get(url)
+
+    if (signal.aborted) {
+      throw createAbortError()
+    }
+
+    if (prefetched) {
+      return prefetched
+    }
+  }
+
+  return fetchBooksWithRetry(url, signal)
+}
+
 function useBooks(url) {
   const cachedPage = getCachedBooks(url)
   const [books, setBooks] = useState(cachedPage?.results ?? [])
   const [loading, setLoading] = useState(!cachedPage)
+  const [slowLoading, setSlowLoading] = useState(false)
   const [error, setError] = useState(null)
   const [next, setNext] = useState(cachedPage?.next ?? null)
   const [previous, setPrevious] = useState(cachedPage?.previous ?? null)
@@ -236,8 +201,12 @@ function useBooks(url) {
 
   useEffect(() => {
     const controller = new AbortController()
+    let cancelPrefetch = () => {}
+    let slowTimerId = null
 
     async function loadBooks() {
+      setSlowLoading(false)
+
       const cached = getCachedBooks(url)
 
       if (cached) {
@@ -246,37 +215,40 @@ function useBooks(url) {
         setPrevious(cached.previous)
         setError(null)
         setLoading(false)
-
-        if (cached.next) {
-          prefetchBooks(cached.next)
-        }
-
+        cancelPrefetch = scheduleNextPrefetch(cached.next)
         return
       }
 
       setLoading(true)
       setError(null)
 
+      slowTimerId = setTimeout(() => {
+        if (!controller.signal.aborted) {
+          setSlowLoading(true)
+        }
+      }, SLOW_LOADING_MS)
+
       try {
-        const data = await loadBooksData(url, controller.signal)
+        const data = await loadForegroundBooks(url, controller.signal)
 
         if (controller.signal.aborted) {
           return
         }
 
+        clearTimeout(slowTimerId)
+        setSlowLoading(false)
         setBooks(data.results)
         setNext(data.next)
         setPrevious(data.previous)
         setLoading(false)
-
-        if (data.next) {
-          prefetchBooks(data.next)
-        }
-      } catch (loadError) {
-        if (loadError.name === 'AbortError' || controller.signal.aborted) {
+        cancelPrefetch = scheduleNextPrefetch(data.next)
+      } catch {
+        if (controller.signal.aborted) {
           return
         }
 
+        clearTimeout(slowTimerId)
+        setSlowLoading(false)
         setError('Could not load books.')
         setLoading(false)
       }
@@ -286,6 +258,8 @@ function useBooks(url) {
 
     return () => {
       controller.abort()
+      cancelPrefetch()
+      clearTimeout(slowTimerId)
     }
   }, [url, attempt])
 
@@ -293,8 +267,7 @@ function useBooks(url) {
     setAttempt((value) => value + 1)
   }
 
-  return { books, loading, error, next, previous, retry }
+  return { books, loading, slowLoading, error, next, previous, retry }
 }
 
-export { prefetchBooks }
 export default useBooks

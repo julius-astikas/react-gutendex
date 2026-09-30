@@ -21,7 +21,8 @@ function Category() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = searchParams.get('page')
   const url = buildCategoryUrl(category, page)
-  const { books, loading, error, next, previous, retry } = useBooks(url)
+  const { books, loading, slowLoading, error, next, previous, retry } =
+    useBooks(url)
 
   function goToPage(pageUrl) {
     if (!pageUrl) {
@@ -42,6 +43,11 @@ function Category() {
     <section>
       <h1>Category: {category}</h1>
       {loading && <BookListSkeleton />}
+      {loading && slowLoading && (
+        <p className="message">
+          Still loading — Gutendex is responding slowly...
+        </p>
+      )}
       {error && (
         <div className="message error">
           <p>{error}</p>
