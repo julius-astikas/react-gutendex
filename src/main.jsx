@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
+import { FavoritesProvider } from './context/FavoritesContext.jsx'
 import App from './App.jsx'
 import Home from './pages/Home.jsx'
 import Category from './pages/Category.jsx'
@@ -23,6 +24,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <FavoritesProvider>
+      <RouterProvider router={router} />
+    </FavoritesProvider>
   </StrictMode>,
 )
