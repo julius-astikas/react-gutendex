@@ -10,19 +10,24 @@ import BookDetails from './pages/BookDetails.jsx'
 import Favorites from './pages/Favorites.jsx'
 import NotFound from './pages/NotFound.jsx'
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      element: <App />,
+      children: [
+        { index: true, element: <Home /> },
+        { path: 'category/:category', element: <Category /> },
+        { path: 'book/:id', element: <BookDetails /> },
+        { path: 'favorites', element: <Favorites /> },
+        { path: '*', element: <NotFound /> },
+      ],
+    },
+  ],
   {
-    path: '/',
-    element: <App />,
-    children: [
-      { index: true, element: <Home /> },
-      { path: 'category/:category', element: <Category /> },
-      { path: 'book/:id', element: <BookDetails /> },
-      { path: 'favorites', element: <Favorites /> },
-      { path: '*', element: <NotFound /> },
-    ],
+    basename: import.meta.env.BASE_URL.replace(/\/+$/, '') || '/',
   },
-])
+)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
