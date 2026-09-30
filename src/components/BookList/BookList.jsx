@@ -4,12 +4,13 @@ import styles from './BookList.module.css'
 function BookList({ books }) {
   return (
     <ul className={styles.list}>
-      {books.map((book) => {
+      {books.map((book, index) => {
         const cover = book.formats?.['image/jpeg']
         const authors =
           book.authors && book.authors.length > 0
             ? book.authors.map((author) => author.name).join(', ')
             : ''
+        const isPriority = index < 4
 
         return (
           <li key={book.id} className={styles.card}>
@@ -24,7 +25,11 @@ function BookList({ books }) {
                     className={styles.cover}
                     src={cover}
                     alt={book.title}
-                    loading="lazy"
+                    width={200}
+                    height={300}
+                    decoding="async"
+                    loading={isPriority ? 'eager' : 'lazy'}
+                    fetchPriority={isPriority ? 'high' : 'auto'}
                   />
                 ) : (
                   <span className={styles.placeholder}>

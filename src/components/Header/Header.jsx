@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import { categories } from '../../constants/categories'
+import { prefetchBooks } from '../../hooks/useBooks'
 import styles from './Header.module.css'
+
+const HOME_BOOKS_URL = 'https://gutendex.com/books/'
 
 function HomeIcon() {
   return (
@@ -37,18 +40,26 @@ function ChevronIcon() {
   )
 }
 
+function getCategoryUrl(category) {
+  return `https://gutendex.com/books/?topic=${encodeURIComponent(
+    category.toLowerCase(),
+  )}`
+}
+
 function Header() {
   const [searchParams] = useSearchParams()
   const searchFromUrl = searchParams.get('search') ?? ''
   const [query, setQuery] = useState(searchFromUrl)
-  const [syncedSearch, setSyncedSearch] = useState(searchFromUrl)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const navigate = useNavigate()
 
-  if (searchFromUrl !== syncedSearch) {
-    setSyncedSearch(searchFromUrl)
-    setQuery(searchFromUrl)
-  }
+  useEffect(() => {
+    async function syncSearchInput() {
+      setQuery(searchFromUrl)
+    }
+
+    syncSearchInput()
+  }, [searchFromUrl])
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -69,6 +80,8 @@ function Header() {
           to="/"
           end
           className={({ isActive }) => (isActive ? styles.active : undefined)}
+          onMouseEnter={() => prefetchBooks(HOME_BOOKS_URL)}
+          onFocus={() => prefetchBooks(HOME_BOOKS_URL)}
         >
           <HomeIcon />
           Home
@@ -121,6 +134,8 @@ function Header() {
             to={`/category/${category.toLowerCase()}`}
             className={({ isActive }) => (isActive ? styles.active : undefined)}
             onClick={() => setCategoriesOpen(false)}
+            onMouseEnter={() => prefetchBooks(getCategoryUrl(category))}
+            onFocus={() => prefetchBooks(getCategoryUrl(category))}
           >
             {category}
           </NavLink>

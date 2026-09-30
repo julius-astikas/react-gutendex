@@ -4,13 +4,50 @@ import BookListSkeleton from '../components/BookListSkeleton'
 import Pagination from '../components/Pagination'
 import useBooks from '../hooks/useBooks'
 
-function Home() {
-  const [searchParams] = useSearchParams()
-  const search = searchParams.get('search')
-  const url = search
-    ? `https://gutendex.com/books/?search=${encodeURIComponent(search)}`
+function buildHomeUrl(search, page) {
+  const params = new URLSearchParams()
+
+  if (page && page !== '1') {
+    params.set('page', page)
+  }
+
+  if (search) {
+    params.set('search', search)
+  }
+
+  const query = params.toString()
+  return query
+    ? `https://gutendex.com/books/?${query}`
     : 'https://gutendex.com/books/'
-  const { books, loading, error, next, previous, goToPage, retry } = useBooks(url)
+}
+
+function Home() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get('search')
+  const page = searchParams.get('page')
+  const url = buildHomeUrl(search, page)
+  const { books, loading, error, next, previous, retry } = useBooks(url)
+
+  function goToPage(pageUrl) {
+    if (!pageUrl) {
+      return
+    }
+
+    const apiUrl = new URL(pageUrl)
+    const nextParams = new URLSearchParams()
+    const nextSearch = apiUrl.searchParams.get('search')
+    const nextPage = apiUrl.searchParams.get('page')
+
+    if (nextSearch) {
+      nextParams.set('search', nextSearch)
+    }
+
+    if (nextPage && nextPage !== '1') {
+      nextParams.set('page', nextPage)
+    }
+
+    setSearchParams(nextParams)
+  }
 
   return (
     <section>
