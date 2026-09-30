@@ -6,7 +6,8 @@
 }
 
 .cover {
-  width: min(100%, 200px);
+  width: 240px;
+  max-width: 100%;
   border: 1px solid #e4e1da;
   border-radius: 8px;
   background: #fff;
@@ -21,13 +22,51 @@
   gap: 0.75rem;
 }
 
+.authors {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
 .info p,
 .subjects {
   margin: 0;
 }
 
+.meta,
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.label {
+  font-weight: 650;
+}
+
+.icon,
+.heartFilled {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.heartFilled {
+  fill: currentColor;
+  stroke: none;
+}
+
 .subjects {
-  padding-left: 1.25rem;
+  margin-top: 0.35rem;
+  padding-left: 1.1rem;
+  color: #52606d;
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .readLink {
@@ -37,6 +76,7 @@
   background: #1d4e89;
   color: #fff;
   text-decoration: none;
+  transition: background 180ms ease;
 }
 
 .readLink:hover {
@@ -44,8 +84,84 @@
   color: #fff;
 }
 
+.info button.saved,
+.info button.saved:hover,
+.info button.saved:active {
+  background: #fff;
+  color: #1d4e89;
+}
+
+.info button.saved:hover {
+  background: #f3f6fb;
+  color: #163a66;
+}
+
+.skeleton {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.skeletonCover,
+.skeletonLine {
+  display: block;
+  background: #e7e2da;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.skeletonCover {
+  width: 240px;
+  height: 340px;
+  border-radius: 8px;
+}
+
+.skeletonInfo {
+  flex: 1 1 16rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeletonLine {
+  height: 1rem;
+  width: 70%;
+  border-radius: 6px;
+}
+
+.skeletonLine:first-child {
+  width: 90%;
+  height: 1.6rem;
+}
+
 @media (max-width: 700px) {
   .layout {
     flex-direction: column;
+  }
+
+  .cover,
+  .skeletonCover {
+    width: min(100%, 200px);
+  }
+
+  .skeleton {
+    flex-direction: column;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .readLink {
+    transition: none;
+  }
+
+  .skeletonCover,
+  .skeletonLine {
+    animation: none;
   }
 }

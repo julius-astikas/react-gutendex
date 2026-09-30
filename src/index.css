@@ -33,6 +33,9 @@ a:hover {
 }
 
 button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font: inherit;
   cursor: pointer;
   border-radius: 8px;
@@ -40,10 +43,18 @@ button {
   background: #1d4e89;
   color: #fff;
   padding: 0.5rem 0.9rem;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
 }
 
 button:hover:not(:disabled) {
   background: #163a66;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button:disabled {
@@ -67,7 +78,37 @@ button:disabled {
 }
 
 .error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
   border-color: #e7b4b4;
   background: #fff5f5;
   color: #8d1d1d;
+}
+
+.error p {
+  margin: 0;
+}
+
+.loading {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .loading {
+    transition: none;
+    animation: none;
+  }
+
+  button:active:not(:disabled) {
+    transform: none;
+  }
 }

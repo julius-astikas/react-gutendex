@@ -17,6 +17,9 @@
 }
 
 .nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   color: #1f2933;
   text-decoration: none;
   border: 1px solid #ddd8cf;
@@ -24,10 +27,28 @@
   border-radius: 999px;
   padding: 0.4rem 0.75rem;
   line-height: 1.2;
+  transition: background 180ms ease, color 180ms ease;
 }
 
 .nav a:hover {
   background: #efece6;
+  color: #1f2933;
+}
+
+.nav a.active,
+.nav a.active:hover {
+  background: #1d4e89;
+  border-color: #1d4e89;
+  color: #fff;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
 }
 
 .form input {
@@ -43,4 +64,48 @@
 
 .form button {
   flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.categoryToggle {
+  display: none;
+}
+
+.categoryToggle svg {
+  transition: transform 180ms ease;
+}
+
+.categoryToggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 700px) {
+  .header button.categoryToggle,
+  .header button.categoryToggle:hover,
+  .header button.categoryToggle:active {
+    display: inline-flex;
+    align-self: flex-start;
+    background: #faf9f7;
+    color: #1f2933;
+    border-color: #ddd8cf;
+  }
+
+  .header button.categoryToggle:hover {
+    background: #efece6;
+  }
+
+  .header .categories {
+    display: none;
+  }
+
+  .header .categoriesOpen {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav a,
+  .categoryToggle svg {
+    transition: none;
+  }
 }

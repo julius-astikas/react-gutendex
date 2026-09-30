@@ -8,6 +8,7 @@ import Home from './pages/Home.jsx'
 import Category from './pages/Category.jsx'
 import BookDetails from './pages/BookDetails.jsx'
 import Favorites from './pages/Favorites.jsx'
+import NotFound from './pages/NotFound.jsx'
 
 const router = createBrowserRouter([
   {
@@ -18,6 +19,7 @@ const router = createBrowserRouter([
       { path: 'category/:category', element: <Category /> },
       { path: 'book/:id', element: <BookDetails /> },
       { path: 'favorites', element: <Favorites /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ])

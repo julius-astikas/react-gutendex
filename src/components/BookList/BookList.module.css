@@ -3,40 +3,144 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
 }
 
 .card {
   margin: 0;
-  padding: 1rem;
   background: #fff;
   border: 1px solid #e4e1da;
   border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(31, 41, 51, 0.06);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
 
-.card h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.05rem;
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 18px rgba(31, 41, 51, 0.12);
+}
+
+.link {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link:hover {
+  color: inherit;
+}
+
+.media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 2 / 3;
+  background: #efece6;
+  overflow: hidden;
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 180ms ease;
+}
+
+.card:hover .cover {
+  transform: scale(1.02);
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  color: #6b6258;
+  font-size: 0.85rem;
+}
+
+.placeholderIcon {
+  width: 2rem;
+  height: 2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.body {
+  padding: 0.65rem 0.75rem 0.8rem;
+}
+
+.body h2 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
-.card a {
-  text-decoration: none;
-}
-
-.card a:hover {
+.link:hover h2 {
   text-decoration: underline;
 }
 
-.card p {
+.body p {
   margin: 0;
   color: #52606d;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+  .list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 600px) {
   .list {
     grid-template-columns: 1fr;
+  }
+
+  .link {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .media {
+    width: 100px;
+    flex: none;
+    aspect-ratio: auto;
+    min-height: 140px;
+  }
+
+  .body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .cover {
+    transition: none;
+  }
+
+  .card:hover,
+  .card:hover .cover {
+    transform: none;
   }
 }
