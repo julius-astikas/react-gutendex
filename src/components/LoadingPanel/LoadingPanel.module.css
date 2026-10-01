@@ -1,0 +1,91 @@
+.panel {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border: 1px solid #ddd8cf;
+  border-radius: 8px;
+}
+
+.message {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.favoritesLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #1d4e89;
+  background: #1d4e89;
+  color: #fff;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.favoritesLink:hover {
+  background: #163a66;
+  color: #fff;
+}
+
+.cached {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e4e1da;
+}
+
+.cachedTitle {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: #52606d;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #ddd8cf;
+  border-radius: 999px;
+  background: #faf9f7;
+  color: #1f2933;
+  text-decoration: none;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.chip:hover {
+  background: #efece6;
+  color: #1f2933;
+}
+
+@media (max-width: 600px) {
+  .panel {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions button,
+  .favoritesLink {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

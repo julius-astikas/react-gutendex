@@ -6,7 +6,7 @@ const prefetchRequests = new Map()
 const CACHE_PREFIX = 'gutendex_cache:'
 const CACHE_TTL_MS = 30 * 60 * 1000
 const RETRY_DELAY_MS = 700
-const SLOW_LOADING_MS = 8000
+const SLOW_LOADING_MS = 5000
 const NEXT_PREFETCH_DELAY_MS = 1500
 
 function wait(ms, signal) {
@@ -86,6 +86,108 @@ function setCachedBooks(url, data) {
   } catch {
     // sessionStorage may be unavailable; memory cache still works
   }
+}
+
+function formatTopicLabel(topic) {
+  if (!topic) {
+    return ''
+  }
+
+  return topic.charAt(0).toUpperCase() + topic.slice(1)
+}
+
+function destinationFromApiUrl(apiUrl) {
+  const parsed = new URL(apiUrl)
+  const topic = parsed.searchParams.get('topic')
+  const search = parsed.searchParams.get('search')
+  const page = parsed.searchParams.get('page')
+  const hasPage = page && page !== '1'
+
+  if (topic) {
+    const label = hasPage
+      ? `${formatTopicLabel(topic)} · page ${page}`
+      : formatTopicLabel(topic)
+    const to = hasPage
+      ? `/category/${topic.toLowerCase()}?page=${page}`
+      : `/category/${topic.toLowerCase()}`
+
+    return { label, to }
+  }
+
+  if (search) {
+    const params = new URLSearchParams()
+    params.set('search', search)
+
+    if (hasPage) {
+      params.set('page', page)
+    }
+
+    return {
+      label: hasPage ? `Search: ${search} · page ${page}` : `Search: ${search}`,
+      to: `/?${params.toString()}`,
+    }
+  }
+
+  if (hasPage) {
+    return {
+      label: `Home · page ${page}`,
+      to: `/?page=${page}`,
+    }
+  }
+
+  return {
+    label: 'Home',
+    to: '/',
+  }
+}
+
+function getCachedBookDestinations(currentApiUrl, max = 5) {
+  const destinations = []
+
+  try {
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index)
+
+      if (!key || !key.startsWith(CACHE_PREFIX)) {
+        continue
+      }
+
+      const apiUrl = key.slice(CACHE_PREFIX.length)
+
+      if (!apiUrl || apiUrl === currentApiUrl) {
+        continue
+      }
+
+      const raw = sessionStorage.getItem(key)
+
+      if (!raw) {
+        continue
+      }
+
+      const entry = JSON.parse(raw)
+
+      if (!entry?.data || !entry.timestamp) {
+        continue
+      }
+
+      if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+        continue
+      }
+
+      const destination = destinationFromApiUrl(apiUrl)
+
+      destinations.push({
+        ...destination,
+        apiUrl,
+        timestamp: entry.timestamp,
+      })
+    }
+  } catch {
+    return []
+  }
+
+  destinations.sort((a, b) => b.timestamp - a.timestamp)
+  return destinations.slice(0, max)
 }
 
 async function fetchBooksOnce(url, signal) {
@@ -270,4 +372,5 @@ function useBooks(url) {
   return { books, loading, slowLoading, error, next, previous, retry }
 }
 
+export { getCachedBookDestinations }
 export default useBooks

@@ -45,18 +45,6 @@
   border-radius: 6px;
 }
 
-@media (max-width: 1024px) {
-  .list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 760px) {
-  .list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 600px) {
   .list {
     grid-template-columns: 1fr;
@@ -71,6 +59,7 @@
     width: 100px;
     flex: none;
     aspect-ratio: auto;
+    min-height: 140px;
   }
 
   .body {

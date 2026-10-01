@@ -1,6 +1,7 @@
 import { useParams, useSearchParams } from 'react-router-dom'
 import BookList from '../components/BookList'
 import BookListSkeleton from '../components/BookListSkeleton'
+import LoadingPanel from '../components/LoadingPanel'
 import Pagination from '../components/Pagination'
 import useBooks from '../hooks/useBooks'
 
@@ -42,12 +43,14 @@ function Category() {
   return (
     <section>
       <h1>Category: {category}</h1>
-      {loading && <BookListSkeleton />}
-      {loading && slowLoading && (
-        <p className="message">
-          Still loading — Gutendex is responding slowly...
-        </p>
+      {loading && (
+        <LoadingPanel
+          slowLoading={slowLoading}
+          hasPreviousResults={books.length > 0}
+          currentApiUrl={url}
+        />
       )}
+      {loading && books.length === 0 && <BookListSkeleton />}
       {error && (
         <div className="message error">
           <p>{error}</p>
@@ -59,7 +62,7 @@ function Category() {
       {!loading && !error && books.length === 0 && (
         <p className="message">No books found.</p>
       )}
-      {!loading && !error && books.length > 0 && (
+      {books.length > 0 && !error && (
         <>
           <BookList books={books} />
           <Pagination next={next} previous={previous} onPageChange={goToPage} />
