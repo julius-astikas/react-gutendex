@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getFirstPageSnapshot } from '../data/firstPageSnapshots'
 
 const booksCache = new Map()
 const prefetchRequests = new Map()
@@ -41,13 +42,44 @@ function isNetworkError(error) {
   return error.name === 'TypeError' || error.message === 'Failed to fetch'
 }
 
+function canonicalBooksUrl(url) {
+  try {
+    const parsed = new URL(url)
+    const page = parsed.searchParams.get('page')
+    const topic = parsed.searchParams.get('topic')
+    const search = parsed.searchParams.get('search')
+    const params = new URLSearchParams()
+
+    if (page && page !== '1') {
+      params.set('page', page)
+    }
+
+    if (topic) {
+      params.set('topic', topic.toLowerCase())
+    }
+
+    if (search) {
+      params.set('search', search)
+    }
+
+    const query = params.toString()
+    return query
+      ? `https://gutendex.com/books/?${query}`
+      : 'https://gutendex.com/books/'
+  } catch {
+    return url
+  }
+}
+
 function getCachedBooks(url) {
-  if (booksCache.has(url)) {
-    return booksCache.get(url)
+  const key = canonicalBooksUrl(url)
+
+  if (booksCache.has(key)) {
+    return booksCache.get(key)
   }
 
   try {
-    const raw = sessionStorage.getItem(`${CACHE_PREFIX}${url}`)
+    const raw = sessionStorage.getItem(`${CACHE_PREFIX}${key}`)
 
     if (!raw) {
       return null
@@ -56,16 +88,16 @@ function getCachedBooks(url) {
     const entry = JSON.parse(raw)
 
     if (!entry?.data || !entry.timestamp) {
-      sessionStorage.removeItem(`${CACHE_PREFIX}${url}`)
+      sessionStorage.removeItem(`${CACHE_PREFIX}${key}`)
       return null
     }
 
     if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-      sessionStorage.removeItem(`${CACHE_PREFIX}${url}`)
+      sessionStorage.removeItem(`${CACHE_PREFIX}${key}`)
       return null
     }
 
-    booksCache.set(url, entry.data)
+    booksCache.set(key, entry.data)
     return entry.data
   } catch {
     return null
@@ -73,11 +105,12 @@ function getCachedBooks(url) {
 }
 
 function setCachedBooks(url, data) {
-  booksCache.set(url, data)
+  const key = canonicalBooksUrl(url)
+  booksCache.set(key, data)
 
   try {
     sessionStorage.setItem(
-      `${CACHE_PREFIX}${url}`,
+      `${CACHE_PREFIX}${key}`,
       JSON.stringify({
         data,
         timestamp: Date.now(),
@@ -233,25 +266,26 @@ function prefetchBooks(url) {
     return Promise.resolve(null)
   }
 
+  const key = canonicalBooksUrl(url)
   const cached = getCachedBooks(url)
 
   if (cached) {
     return Promise.resolve(cached)
   }
 
-  if (prefetchRequests.has(url)) {
-    return prefetchRequests.get(url)
+  if (prefetchRequests.has(key)) {
+    return prefetchRequests.get(key)
   }
 
   const request = fetchBooksWithRetry(url, null)
     .catch(() => null)
     .finally(() => {
-      if (prefetchRequests.get(url) === request) {
-        prefetchRequests.delete(url)
+      if (prefetchRequests.get(key) === request) {
+        prefetchRequests.delete(key)
       }
     })
 
-  prefetchRequests.set(url, request)
+  prefetchRequests.set(key, request)
   return request
 }
 
@@ -276,8 +310,10 @@ async function loadForegroundBooks(url, signal) {
     return cached
   }
 
-  if (prefetchRequests.has(url)) {
-    const prefetched = await prefetchRequests.get(url)
+  const prefetchKey = canonicalBooksUrl(url)
+
+  if (prefetchRequests.has(prefetchKey)) {
+    const prefetched = await prefetchRequests.get(prefetchKey)
 
     if (signal.aborted) {
       throw createAbortError()
@@ -291,15 +327,27 @@ async function loadForegroundBooks(url, signal) {
   return fetchBooksWithRetry(url, signal)
 }
 
+function applyPage(page, setBooks, setNext, setPrevious) {
+  setBooks(page.results)
+  setNext(page.next)
+  setPrevious(page.previous)
+}
+
 function useBooks(url) {
-  const cachedPage = getCachedBooks(url)
-  const [books, setBooks] = useState(cachedPage?.results ?? [])
-  const [loading, setLoading] = useState(!cachedPage)
+  const initialPage = getCachedBooks(url) ?? getFirstPageSnapshot(url)
+  const [appliedUrl, setAppliedUrl] = useState(url)
+  const [books, setBooks] = useState(initialPage?.results ?? [])
+  const [loading, setLoading] = useState(!initialPage)
   const [slowLoading, setSlowLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [next, setNext] = useState(cachedPage?.next ?? null)
-  const [previous, setPrevious] = useState(cachedPage?.previous ?? null)
+  const [next, setNext] = useState(initialPage?.next ?? null)
+  const [previous, setPrevious] = useState(initialPage?.previous ?? null)
   const [attempt, setAttempt] = useState(0)
+
+  const urlChanged = appliedUrl !== url
+  const instantPage = urlChanged
+    ? getCachedBooks(url) ?? getFirstPageSnapshot(url)
+    : null
 
   useEffect(() => {
     const controller = new AbortController()
@@ -312,26 +360,37 @@ function useBooks(url) {
       const cached = getCachedBooks(url)
 
       if (cached) {
-        setBooks(cached.results)
-        setNext(cached.next)
-        setPrevious(cached.previous)
+        applyPage(cached, setBooks, setNext, setPrevious)
         setError(null)
         setLoading(false)
+        setAppliedUrl(url)
         cancelPrefetch = scheduleNextPrefetch(cached.next)
         return
       }
 
-      setLoading(true)
-      setError(null)
+      const snapshot = getFirstPageSnapshot(url)
 
-      slowTimerId = setTimeout(() => {
-        if (!controller.signal.aborted) {
-          setSlowLoading(true)
-        }
-      }, SLOW_LOADING_MS)
+      if (snapshot) {
+        applyPage(snapshot, setBooks, setNext, setPrevious)
+        setError(null)
+        setLoading(false)
+        setAppliedUrl(url)
+      } else {
+        setLoading(true)
+        setError(null)
+        setAppliedUrl(url)
+
+        slowTimerId = setTimeout(() => {
+          if (!controller.signal.aborted) {
+            setSlowLoading(true)
+          }
+        }, SLOW_LOADING_MS)
+      }
 
       try {
-        const data = await loadForegroundBooks(url, controller.signal)
+        const data = snapshot
+          ? await fetchBooksWithRetry(url, controller.signal)
+          : await loadForegroundBooks(url, controller.signal)
 
         if (controller.signal.aborted) {
           return
@@ -339,9 +398,8 @@ function useBooks(url) {
 
         clearTimeout(slowTimerId)
         setSlowLoading(false)
-        setBooks(data.results)
-        setNext(data.next)
-        setPrevious(data.previous)
+        applyPage(data, setBooks, setNext, setPrevious)
+        setError(null)
         setLoading(false)
         cancelPrefetch = scheduleNextPrefetch(data.next)
       } catch {
@@ -351,8 +409,14 @@ function useBooks(url) {
 
         clearTimeout(slowTimerId)
         setSlowLoading(false)
-        setError('Could not load books.')
         setLoading(false)
+
+        if (snapshot) {
+          setError(null)
+          return
+        }
+
+        setError('Could not load books.')
       }
     }
 
@@ -369,7 +433,15 @@ function useBooks(url) {
     setAttempt((value) => value + 1)
   }
 
-  return { books, loading, slowLoading, error, next, previous, retry }
+  return {
+    books: instantPage ? instantPage.results : books,
+    loading: urlChanged ? !instantPage : loading,
+    slowLoading: urlChanged ? false : slowLoading,
+    error: urlChanged ? null : error,
+    next: instantPage ? instantPage.next : next,
+    previous: instantPage ? instantPage.previous : previous,
+    retry,
+  }
 }
 
 export { getCachedBookDestinations }

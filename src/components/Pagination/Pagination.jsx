@@ -1,21 +1,56 @@
+import { useEffect, useRef, useState } from 'react'
 import styles from './Pagination.module.css'
 
-function Pagination({ next, previous, onPageChange }) {
+function scrollToTop() {
+  const reduceMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)',
+  ).matches
+
+  window.scrollTo({
+    top: 0,
+    behavior: reduceMotion ? 'auto' : 'smooth',
+  })
+}
+
+function Pagination({ next, previous, loading, onPageChange }) {
+  const [pendingDirection, setPendingDirection] = useState(null)
+  const pendingRef = useRef(null)
+
+  useEffect(() => {
+    if (!loading) {
+      pendingRef.current = null
+    }
+  }, [loading, next, previous])
+
+  function changePage(direction, pageUrl) {
+    if (!pageUrl || loading || pendingRef.current) {
+      return
+    }
+
+    pendingRef.current = direction
+    setPendingDirection(direction)
+    scrollToTop()
+    onPageChange(pageUrl)
+  }
+
+  const previousDisabled = loading || !previous
+  const nextDisabled = loading || !next
+
   return (
     <div className={styles.pagination}>
       <button
         type="button"
-        onClick={() => onPageChange(previous)}
-        disabled={previous === null}
+        onClick={() => changePage('previous', previous)}
+        disabled={previousDisabled}
       >
-        Previous
+        {loading && pendingDirection === 'previous' ? 'Loading…' : 'Previous'}
       </button>
       <button
         type="button"
-        onClick={() => onPageChange(next)}
-        disabled={next === null}
+        onClick={() => changePage('next', next)}
+        disabled={nextDisabled}
       >
-        Next
+        {loading && pendingDirection === 'next' ? 'Loading…' : 'Next'}
       </button>
     </div>
   )

@@ -76,7 +76,12 @@ function Home() {
       {books.length > 0 && !error && (
         <>
           <BookList books={books} />
-          <Pagination next={next} previous={previous} onPageChange={goToPage} />
+          <Pagination
+            next={next}
+            previous={previous}
+            loading={loading}
+            onPageChange={goToPage}
+          />
         </>
       )}
     </section>
