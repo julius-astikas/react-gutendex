@@ -91,19 +91,8 @@ button:disabled {
   margin: 0;
 }
 
-.loading {
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.55;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  button,
-  .loading {
+  button {
     transition: none;
     animation: none;
   }
